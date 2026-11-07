@@ -14,6 +14,15 @@ Transcreve áudios longos em **português** usando o [Whisper](https://github.co
 python transcribe.py "C:\caminho\para\audio.mp3"
 ```
 
+### Atalho no Windows: `transcrever.bat`
+
+Aceita um arquivo **ou uma pasta** (transcreve todos os áudios dela, pulando os que já têm `_transcricao.txt`). Também funciona arrastando o arquivo/pasta para cima do `.bat`.
+
+```bash
+transcrever.bat "C:\caminho\para\audio.mp3"
+transcrever.bat "C:\caminho\para\pasta" --model small
+```
+
 Opções:
 
 | Opção | Descrição |
