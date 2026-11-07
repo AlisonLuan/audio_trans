@@ -6,7 +6,7 @@ Transcreve áudios longos em **português** usando o [Whisper](https://github.co
 
 ## Requisitos
 
-- Windows 64-bit. O atalho `transcrever.bat` usa Python 3.9–3.13, se disponível.
+- Windows 64-bit. O atalho `transcrever.bat` usa Python 3.9 ou mais recente, se disponível.
   Caso contrário, pergunta antes de baixar e instalar o Python 3.13.17
   (somente para o usuário atual, sem alterar o PATH do sistema).
 - Para usar `python transcribe.py` diretamente, instale Python 3.9+ antes.

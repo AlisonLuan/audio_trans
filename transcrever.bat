@@ -22,9 +22,9 @@ if not exist "%TARGET%" (echo ERRO: caminho nao encontrado: "%TARGET%" & set "EX
 
 set "PYTHON_CMD="
 set "PYTHON_ARGS="
-python -c "import sys; sys.exit(0 if (3, 9) <= sys.version_info[:2] < (3, 14) else 1)" >nul 2>nul
+python -c "import sys; sys.exit(0 if sys.version_info[:2] >= (3, 9) else 1)" >nul 2>nul
 if not errorlevel 1 set "PYTHON_CMD=python"
-for %%V in (3.13 3.12 3.11 3.10 3.9) do if not defined PYTHON_CMD call :check_python_launcher %%V
+if not defined PYTHON_CMD call :check_python_launcher 3
 if not defined PYTHON_CMD goto :install_python
 
 if not exist "%TARGET%" (echo ERRO: caminho nao encontrado: "%TARGET%" & set "EXIT_CODE=1" & goto :end)
@@ -32,7 +32,7 @@ if not exist "%TARGET%" (echo ERRO: caminho nao encontrado: "%TARGET%" & set "EX
 goto :process
 
 :install_python
-echo Python 3.9 a 3.13 nao foi encontrado.
+echo Python 3.9 ou mais recente nao foi encontrado.
 echo O instalador oficial do Python 3.13.17 sera baixado e instalado apenas para este usuario.
 choice /c SN /n /m "Permitir o download e a instalacao do Python? [S/N] "
 if errorlevel 2 (
@@ -89,7 +89,7 @@ if errorlevel 1 (set /a FAIL+=1) else (set /a OK+=1)
 exit /b 0
 
 :check_python_launcher
-py -%~1 -c "import sys; sys.exit(0 if (3, 9) <= sys.version_info[:2] < (3, 14) else 1)" >nul 2>nul
+py -%~1 -c "import sys; sys.exit(0 if sys.version_info[:2] >= (3, 9) else 1)" >nul 2>nul
 if not errorlevel 1 (
     set "PYTHON_CMD=py"
     set "PYTHON_ARGS=-%~1"
