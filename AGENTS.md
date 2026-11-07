@@ -13,6 +13,7 @@ audio_trans/
 ├── .gitignore
 ├── AGENTS.md
 ├── audio/                 # Local recordings; ignored by Git
+├── install_python.ps1     # Verified per-user Python installer
 ├── README.md
 ├── transcrever.bat
 ├── transcribe.py
@@ -43,7 +44,11 @@ implementation.
 -   `transcribe.py` requests Portuguese transcription with Whisper and
     writes a UTF-8 text file beside the input.
 -   `transcrever.bat` accepts a file or folder and forwards model and
-    timestamp options to the Python script.
+    timestamp options to the Python script. If no compatible Python is
+    available, it asks before starting the per-user installer.
+-   `install_python.ps1` downloads the pinned official Python installer,
+    checks its SHA-256 hash and Authenticode signature, and installs it
+    without changing the system PATH.
 -   `README.md` documents setup, invocation, and privacy behavior; keep
     it aligned with actual code.
 -   `.gitignore` excludes local audio recordings and generated

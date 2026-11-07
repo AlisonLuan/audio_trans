@@ -17,6 +17,7 @@ import time
 from pathlib import Path
 
 CUDA_INDEX_URL = "https://download.pytorch.org/whl/cu126"
+__version__ = "0.2.0"
 
 
 # --------------------------------------------------------------------------
@@ -144,6 +145,9 @@ def transcribe(audio: Path, model_name: str, timestamps: bool) -> Path:
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Transcreve áudio em português com Whisper (local).")
+    parser.add_argument(
+        "--version", action="version", version=f"%(prog)s {__version__}"
+    )
     parser.add_argument("audio", help="caminho do arquivo (.mp3, .m4a, .wav, ...)")
     parser.add_argument("--model", choices=["small", "medium"], default="medium",
                         help="modelo Whisper (padrão: medium; use small se faltar memória)")

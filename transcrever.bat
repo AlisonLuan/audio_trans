@@ -18,8 +18,42 @@ set "SCRIPT=%~dp0transcribe.py"
 set "EXTRA=%~2 %~3 %~4"
 set /a OK=0, FAIL=0, SKIP=0
 
-where python >nul 2>nul || (echo ERRO: Python nao encontrado no PATH. & set "EXIT_CODE=1" & goto :end)
+if not exist "%TARGET%" (echo ERRO: caminho nao encontrado: "%TARGET%" & set "EXIT_CODE=1" & goto :end)
 
+set "PYTHON_CMD="
+set "PYTHON_ARGS="
+python -c "import sys; sys.exit(0 if (3, 9) <= sys.version_info[:2] < (3, 14) else 1)" >nul 2>nul
+if not errorlevel 1 set "PYTHON_CMD=python"
+for %%V in (3.13 3.12 3.11 3.10 3.9) do if not defined PYTHON_CMD call :check_python_launcher %%V
+if not defined PYTHON_CMD goto :install_python
+
+if not exist "%TARGET%" (echo ERRO: caminho nao encontrado: "%TARGET%" & set "EXIT_CODE=1" & goto :end)
+
+goto :process
+
+:install_python
+echo Python 3.9 a 3.13 nao foi encontrado.
+echo O instalador oficial do Python 3.13.17 sera baixado e instalado apenas para este usuario.
+choice /c SN /n /m "Permitir o download e a instalacao do Python? [S/N] "
+if errorlevel 2 (
+    echo Instalacao cancelada.
+    set "EXIT_CODE=1"
+    goto :end
+)
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0install_python.ps1"
+if errorlevel 1 (
+    echo ERRO: nao foi possivel instalar o Python.
+    set "EXIT_CODE=1"
+    goto :end
+)
+set "PYTHON_CMD=%LOCALAPPDATA%\Programs\Python\Python313\python.exe"
+if not exist "%PYTHON_CMD%" (
+    echo ERRO: Python nao foi encontrado apos a instalacao.
+    set "EXIT_CODE=1"
+    goto :end
+)
+
+:process
 if not exist "%TARGET%" (echo ERRO: caminho nao encontrado: "%TARGET%" & set "EXIT_CODE=1" & goto :end)
 
 rem Pasta? (o sufixo \ so existe se for diretorio)
@@ -50,8 +84,16 @@ if exist "%OUT%" (
 )
 echo.
 echo ===== Transcrevendo: "%AUDIO%" =====
-python "%SCRIPT%" "%AUDIO%" %EXTRA%
+"%PYTHON_CMD%" %PYTHON_ARGS% "%SCRIPT%" "%AUDIO%" %EXTRA%
 if errorlevel 1 (set /a FAIL+=1) else (set /a OK+=1)
+exit /b 0
+
+:check_python_launcher
+py -%~1 -c "import sys; sys.exit(0 if (3, 9) <= sys.version_info[:2] < (3, 14) else 1)" >nul 2>nul
+if not errorlevel 1 (
+    set "PYTHON_CMD=py"
+    set "PYTHON_ARGS=-%~1"
+)
 exit /b 0
 
 :usage

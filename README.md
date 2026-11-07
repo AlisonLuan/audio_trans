@@ -1,10 +1,15 @@
 # audio_trans
 
+Versão **0.2.0**.
+
 Transcreve áudios longos em **português** usando o [Whisper](https://github.com/openai/whisper) da OpenAI, **100% local** (nada é enviado para a internet, exceto o download inicial do modelo e das dependências).
 
 ## Requisitos
 
-- Python 3.9+ (testado no Windows 11)
+- Windows 64-bit. O atalho `transcrever.bat` usa Python 3.9–3.13, se disponível.
+  Caso contrário, pergunta antes de baixar e instalar o Python 3.13.17
+  (somente para o usuário atual, sem alterar o PATH do sistema).
+- Para usar `python transcribe.py` diretamente, instale Python 3.9+ antes.
 - ~5 GB de VRAM para o modelo `medium` (ou use `--model small`, ~2 GB)
 - GPU NVIDIA recomendada; sem GPU funciona na CPU, porém bem mais devagar
 
@@ -36,6 +41,8 @@ Opções:
 O resultado é salvo na **mesma pasta do áudio**, como `<nome_do_audio>_transcricao.txt`, e o terminal mostra uma barra de progresso e uma mensagem ao concluir.
 
 Na primeira execução o script instala sozinho o que faltar: `torch` (com CUDA se houver GPU NVIDIA), `openai-whisper` e o `ffmpeg` (cópia portátil via `static-ffmpeg`, sem precisar de administrador).
+É necessária conexão com a internet para baixar o Python (se necessário),
+as dependências e o modelo Whisper. O PyTorch pode ocupar vários GB.
 
 ## Instalar o FFmpeg manualmente (opcional)
 
