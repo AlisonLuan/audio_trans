@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Áudios e transcrições são privados: nunca versionar
+*.mp3
+*.m4a
+*.wav
+*.flac
+*.ogg
+*.aac
+*.wma
+*.mp4
+*.mkv
+*_transcricao.txt
+
+# Modelos do Whisper e variáveis de ambiente
+*.pt
+.env
