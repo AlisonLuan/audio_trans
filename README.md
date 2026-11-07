@@ -23,6 +23,9 @@ transcrever.bat "C:\caminho\para\audio.mp3"
 transcrever.bat "C:\caminho\para\pasta" --model small
 ```
 
+Se uma ou mais transcrições falharem, o `.bat` termina com código de
+saída diferente de zero.
+
 Opções:
 
 | Opção | Descrição |

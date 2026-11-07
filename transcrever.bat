@@ -1,5 +1,6 @@
 @echo off
 setlocal EnableExtensions
+set "EXIT_CODE=0"
 chcp 65001 >nul
 
 rem Uso:
@@ -10,16 +11,16 @@ rem Opcoes extras sao repassadas ao script, ex.: --model small
 
 set "TARGET=%~1"
 if not defined TARGET set /p "TARGET=Arraste ou digite o caminho do audio ou da pasta: "
-if not defined TARGET goto :usage
+if not defined TARGET (set "EXIT_CODE=1" & goto :usage)
 set "TARGET=%TARGET:"=%"
 
 set "SCRIPT=%~dp0transcribe.py"
 set "EXTRA=%~2 %~3 %~4"
 set /a OK=0, FAIL=0, SKIP=0
 
-where python >nul 2>nul || (echo ERRO: Python nao encontrado no PATH. & goto :end)
+where python >nul 2>nul || (echo ERRO: Python nao encontrado no PATH. & set "EXIT_CODE=1" & goto :end)
 
-if not exist "%TARGET%" (echo ERRO: caminho nao encontrado: "%TARGET%" & goto :end)
+if not exist "%TARGET%" (echo ERRO: caminho nao encontrado: "%TARGET%" & set "EXIT_CODE=1" & goto :end)
 
 rem Pasta? (o sufixo \ so existe se for diretorio)
 if exist "%TARGET%\" goto :folder
@@ -36,6 +37,7 @@ if %OK%==0 if %FAIL%==0 if %SKIP%==0 echo Nenhum arquivo de audio encontrado em 
 :summary
 echo.
 echo ===== Resumo: %OK% concluido(s), %SKIP% ja existente(s), %FAIL% com erro =====
+if not "%FAIL%"=="0" set "EXIT_CODE=1"
 goto :end
 
 :one
@@ -58,4 +60,4 @@ echo Uso: transcrever.bat "caminho\do\audio_ou_pasta" [--model small] [--no-time
 :end
 echo.
 pause
-endlocal
+endlocal & exit /b %EXIT_CODE%

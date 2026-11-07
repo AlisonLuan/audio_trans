@@ -5,6 +5,7 @@ __pycache__/
 venv/
 
 # Áudios e transcrições são privados: nunca versionar
+/audio/
 *.mp3
 *.m4a
 *.wav
@@ -12,8 +13,10 @@ venv/
 *.ogg
 *.aac
 *.wma
+*.opus
 *.mp4
 *.mkv
+*.webm
 *_transcricao.txt
 
 # Modelos do Whisper e variáveis de ambiente

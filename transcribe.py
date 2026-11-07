@@ -47,9 +47,8 @@ def ensure_torch() -> None:
     if has_module("torch"):
         import torch  # noqa: WPS433
 
-        # Se há GPU NVIDIA mas o torch instalado é só CPU, troca pela versão CUDA.
-        if not (use_cuda_build and not torch.cuda.is_available()
-                and "+cpu" in torch.__version__):
+        # A versão do pacote não identifica de forma confiável builds sem CUDA.
+        if not (use_cuda_build and torch.version.cuda is None):
             return
         print("[setup] GPU NVIDIA detectada, mas o PyTorch instalado é só CPU. "
               "Instalando versão com CUDA...")
