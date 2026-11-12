@@ -14,8 +14,10 @@ audio_trans/
 ├── AGENTS.md
 ├── audio/                 # Local recordings; ignored by Git
 ├── install_python.ps1     # Verified per-user Python installer
+├── gui.py                 # Tkinter GUI; launches transcribe.py as a subprocess
+├── Output/                # Built executable bundle; ignored by Git
 ├── README.md
-├── transcrever.bat
+├── transcrever.bat        # Also: --gui and --build modes
 ├── transcribe.py
 └── .git/                  # Git metadata, not application source
 ```

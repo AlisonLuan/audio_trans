@@ -10,6 +10,7 @@ O resultado é salvo em <nome_do_audio>_transcricao.txt, na mesma pasta do áudi
 
 import argparse
 import importlib.util
+import os
 import shutil
 import subprocess
 import sys
@@ -17,7 +18,12 @@ import time
 from pathlib import Path
 
 CUDA_INDEX_URL = "https://download.pytorch.org/whl/cu126"
-__version__ = "0.2.0"
+__version__ = "0.3.0"
+MODELS = ["tiny", "base", "small", "medium", "large"]
+LANGUAGES = ["pt", "en", "auto"]
+EFFORTS = ["fast", "balanced", "accurate"]
+AUDIO_EXTENSIONS = ("mp3", "m4a", "wav", "flac", "ogg", "aac", "wma", "opus",
+                    "mp4", "mkv", "webm")  # mesma lista do transcrever.bat
 
 
 # --------------------------------------------------------------------------
@@ -109,7 +115,21 @@ def build_text(segments: list, timestamps: bool) -> str:
     return "\n".join(lines)
 
 
-def transcribe(audio: Path, model_name: str, timestamps: bool) -> Path:
+def decode_options(effort: str) -> dict:
+    """Mapeia o nível de esforço para opções de decodificação do Whisper.
+
+    'balanced' não altera nada: é exatamente o comportamento das versões 0.2.x.
+    """
+    if effort == "fast":
+        return {"temperature": 0.0}  # só decodificação gulosa, sem novas tentativas
+    if effort == "accurate":
+        # beam search (temperatura 0); o Whisper usa best_of nas tentativas com T>0
+        return {"beam_size": 5, "best_of": 5}
+    return {}
+
+
+def transcribe(audio: Path, model_name: str, timestamps: bool,
+               language: str = "pt", effort: str = "balanced") -> Path:
     import torch  # noqa: WPS433
     import whisper  # noqa: WPS433
 
@@ -126,17 +146,26 @@ def transcribe(audio: Path, model_name: str, timestamps: bool) -> Path:
     start = time.time()
     result = model.transcribe(
         str(audio),
-        language="pt",
+        language=None if language == "auto" else language,
         task="transcribe",
         verbose=False,                      # mostra barra de progresso
         fp16=(device == "cuda"),
         condition_on_previous_text=False,   # evita repetições em áudios longos
+        **decode_options(effort),
     )
     elapsed = time.time() - start
 
     output = audio.with_name(f"{audio.stem}_transcricao.txt")
-    output.write_text(build_text(result["segments"], timestamps) + "\n",
-                      encoding="utf-8")
+    # Escreve em arquivo temporário e só então substitui: uma interrupção
+    # (ex.: Cancelar na GUI) não deixa um .txt parcial parecendo completo.
+    partial = output.with_name(output.name + ".part")
+    try:
+        partial.write_text(build_text(result["segments"], timestamps) + "\n",
+                           encoding="utf-8")
+        os.replace(partial, output)
+    except OSError:
+        partial.unlink(missing_ok=True)
+        raise
     print(f"\n[ok] Transcrição concluída em {fmt_time(elapsed)}.")
     print(f"[ok] Arquivo salvo em: {output}")
     return output
@@ -149,8 +178,14 @@ def main() -> None:
         "--version", action="version", version=f"%(prog)s {__version__}"
     )
     parser.add_argument("audio", help="caminho do arquivo (.mp3, .m4a, .wav, ...)")
-    parser.add_argument("--model", choices=["small", "medium"], default="medium",
+    parser.add_argument("--model", choices=MODELS, default="medium",
                         help="modelo Whisper (padrão: medium; use small se faltar memória)")
+    parser.add_argument("--language", choices=LANGUAGES, default="pt",
+                        help="idioma falado no áudio (padrão: pt; auto = detectar)")
+    parser.add_argument("--effort", choices=EFFORTS, default="balanced",
+                        help="esforço de decodificação: fast (rápido), balanced "
+                             "(padrão, igual às versões anteriores) ou accurate "
+                             "(beam search, mais lento)")
     parser.add_argument("--no-timestamps", action="store_true",
                         help="salva só o texto, em parágrafos, sem marcações de tempo")
     args = parser.parse_args()
@@ -160,7 +195,8 @@ def main() -> None:
         sys.exit(f"ERRO: arquivo não encontrado: {audio}")
 
     ensure_dependencies()
-    transcribe(audio, args.model, timestamps=not args.no_timestamps)
+    transcribe(audio, args.model, timestamps=not args.no_timestamps,
+               language=args.language, effort=args.effort)
 
 
 if __name__ == "__main__":

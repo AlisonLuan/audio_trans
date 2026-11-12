@@ -19,6 +19,10 @@ venv/
 *.webm
 *_transcricao.txt
 
+# Artefatos do build do executavel (transcrever.bat --build)
+/build/
+/Output/
+
 # Modelos do Whisper e variáveis de ambiente
 *.pt
 .env
