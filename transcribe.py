@@ -18,7 +18,7 @@ import time
 from pathlib import Path
 
 CUDA_INDEX_URL = "https://download.pytorch.org/whl/cu126"
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 MODELS = ["tiny", "base", "small", "medium", "large"]
 LANGUAGES = ["pt", "en", "auto"]
 EFFORTS = ["fast", "balanced", "accurate"]

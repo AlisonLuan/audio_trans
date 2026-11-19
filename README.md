@@ -1,6 +1,6 @@
 # audio_trans
 
-Versão / Version **0.3.0**
+Versão / Version **0.4.0**
 
 **PT** — Transcreve áudios longos usando o [Whisper](https://github.com/openai/whisper) da OpenAI, **100% local** (nada é enviado para a internet, exceto o download inicial do modelo e das dependências). Padrão: português; inglês e detecção automática também estão disponíveis.
 
@@ -8,9 +8,9 @@ Versão / Version **0.3.0**
 
 ## Download
 
-**PT** — Baixe `audio_trans-0.3.0-windows.zip` na página de [Releases](https://github.com/AlisonLuan/audio_trans/releases/latest), extraia e execute `audio_trans.exe`. Não precisa de instalação, mas o Python 3.9+ é necessário para transcrever (a interface oferece instalar o Python oficial, apenas para o seu usuário).
+**PT** — Baixe `audio_trans-0.4.0-windows.zip` na página de [Releases](https://github.com/AlisonLuan/audio_trans/releases/latest), extraia e execute `audio_trans.exe`. Não precisa de instalação, mas o Python 3.9+ é necessário para transcrever (a interface oferece instalar o Python oficial, apenas para o seu usuário).
 
-**EN** — Download `audio_trans-0.3.0-windows.zip` from the [Releases](https://github.com/AlisonLuan/audio_trans/releases/latest) page, extract it and run `audio_trans.exe`. No installer is needed, but Python 3.9+ is required to transcribe (the app offers to install the official Python for the current user only). The executable is not signed, so Windows SmartScreen may warn on first run. The zip is not stored in the Git tree; it is attached to each release.
+**EN** — Download `audio_trans-0.4.0-windows.zip` from the [Releases](https://github.com/AlisonLuan/audio_trans/releases/latest) page, extract it and run `audio_trans.exe`. No installer is needed, but Python 3.9+ is required to transcribe (the app offers to install the official Python for the current user only). The executable is not signed, so Windows SmartScreen may warn on first run. The zip is not stored in the Git tree; it is attached to each release.
 
 ## Requisitos / Requirements
 
@@ -28,7 +28,7 @@ transcrever.bat --gui              # run from source (needs Python 3.9+)
 transcrever.bat --build            # build the executable into Output\
 ```
 
-`--build` creates a local virtual environment in `build\`, installs PyInstaller and sounddevice into it (internet required), builds the GUI and assembles the **`Output\`** folder:
+`--build` creates a local virtual environment in `build\`, installs PyInstaller, sounddevice and Pillow into it (internet required), builds the GUI and assembles the **`Output\`** folder:
 
 | Item | Purpose |
 |---|---|
@@ -50,6 +50,7 @@ The executable does **not** contain PyTorch, Whisper or the model. It needs a Py
 - **Timestamps:** on/off.
 - **Record audio:** *Record* / *Stop and save* writes a mono 16 kHz WAV named `rec_YYYYMMDD_HHMMSS.wav` to `audio\` next to the app (changeable; existing files are never overwritten). Optionally transcribes right after saving. A recording is kept in memory until it is saved: if saving fails you can retry, and the audio is written through a temporary `.part` file so an incomplete WAV never looks finished. A warning is shown if the microphone reported dropped audio. Everything is held in RAM while recording (about 115 MB per hour).
 - **Cancel:** stops the transcription and its child processes (ffmpeg, pip, the Python installer). Transcripts are written through a temporary `.part` file, so a cancelled run does not leave a partial `.txt`.
+- **Images to PDF:** *Choose images and create PDF...* merges the selected images (`jpg`, `png`, `bmp`, `gif`, `tif`, `webp`), one per page, in filename order, into a PDF whose name and folder you pick (an existing file asks before being overwritten). Phone-photo rotation (EXIF) is applied and transparency becomes white; images are not resized or recompressed beyond JPEG re-encoding by Pillow. Works offline. Needs Pillow: bundled by `--build`; from source run `python -m pip install pillow`.
 - **Help → About / Version.**
 
 ## Linha de comando / Command line

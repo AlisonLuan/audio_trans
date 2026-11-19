@@ -118,13 +118,13 @@ if not exist "%ROOT%\gui.py" (echo ERRO: --build precisa do codigo-fonte ^(gui.p
 set "BUILD_DIR=%ROOT%\build"
 set "VENV=%BUILD_DIR%\venv"
 set "OUTPUT=%ROOT%\Output"
-echo Gerando o executavel (requer internet para baixar PyInstaller e sounddevice)...
+echo Gerando o executavel (requer internet para baixar PyInstaller, sounddevice e pillow)...
 if not exist "%VENV%\Scripts\python.exe" (
     "%PYTHON_CMD%" %PYTHON_ARGS% -m venv "%VENV%"
     if errorlevel 1 (echo ERRO: nao foi possivel criar o ambiente virtual. & set "EXIT_CODE=1" & goto :end)
 )
-"%VENV%\Scripts\python.exe" -m pip install --upgrade pyinstaller sounddevice
-if errorlevel 1 (echo ERRO: nao foi possivel instalar PyInstaller/sounddevice. & set "EXIT_CODE=1" & goto :end)
+"%VENV%\Scripts\python.exe" -m pip install --upgrade pyinstaller sounddevice pillow
+if errorlevel 1 (echo ERRO: nao foi possivel instalar PyInstaller/sounddevice/pillow. & set "EXIT_CODE=1" & goto :end)
 "%VENV%\Scripts\python.exe" -m PyInstaller --noconfirm --clean --onedir --windowed --name audio_trans --distpath "%BUILD_DIR%\dist" --workpath "%BUILD_DIR%\work" --specpath "%BUILD_DIR%" --paths "%ROOT%" --collect-all sounddevice "%ROOT%\gui.py"
 if errorlevel 1 (echo ERRO: o PyInstaller falhou. & set "EXIT_CODE=1" & goto :end)
 

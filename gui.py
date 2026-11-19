@@ -13,6 +13,7 @@ import os
 import queue
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 import wave
@@ -34,6 +35,7 @@ INSTALLER_SCRIPT = APP_DIR / "install_python.ps1"
 DEFAULT_RECORDING_DIR = APP_DIR / "audio"
 SAMPLE_RATE = 16000  # taxa nativa do Whisper; gravação mono, 16 bits
 CREATE_NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+IMAGE_EXTENSIONS = ("jpg", "jpeg", "png", "bmp", "gif", "tif", "tiff", "webp")
 PYTHON_CHECK = "import sys; sys.exit(0 if sys.version_info[:2] >= (3, 9) else 1)"
 
 # --------------------------------------------------------------------------
@@ -100,6 +102,13 @@ TEXTS = {
                        "<nome>_transcricao.txt."),
         "version_title": "Versão", "version_text": "audio_trans versão {version}",
         "btn_close": "Fechar",
+        "grp_pdf": "Imagens para PDF", "btn_pdf": "Escolher imagens e criar PDF...",
+        "choose_images": "Escolha as imagens (serão unidas em ordem de nome)",
+        "filetype_images": "Imagens", "save_pdf": "Salvar PDF como",
+        "pdf_saved": "PDF criado ({count} página(s)): {path}",
+        "err_no_pillow": ("Para criar PDFs, instale o Pillow:\n"
+                          "python -m pip install pillow"),
+        "err_pdf": "Não foi possível criar o PDF:\n{error}",
     },
     "en": {
         "language_name": "English",
@@ -161,6 +170,13 @@ TEXTS = {
                        "<name>_transcricao.txt."),
         "version_title": "Version", "version_text": "audio_trans version {version}",
         "btn_close": "Close",
+        "grp_pdf": "Images to PDF", "btn_pdf": "Choose images and create PDF...",
+        "choose_images": "Choose the images (merged in filename order)",
+        "filetype_images": "Images", "save_pdf": "Save PDF as",
+        "pdf_saved": "PDF created ({count} page(s)): {path}",
+        "err_no_pillow": ("To create PDFs, install Pillow:\n"
+                          "python -m pip install pillow"),
+        "err_pdf": "Could not create the PDF:\n{error}",
     },
 }
 
@@ -210,6 +226,40 @@ def collect_audio_files(folder: Path) -> list:
                   if p.is_file() and p.suffix.lower() in extensions)
 
 
+def images_to_pdf(images: list, destination: Path) -> None:
+    """Une as imagens (uma por página) em um PDF; só o arquivo completo recebe o nome final."""
+    from PIL import Image, ImageOps  # Pillow é opcional: só quem converte imagens precisa
+
+    pages = []
+    try:
+        for path in images:
+            with Image.open(path) as source:
+                image = ImageOps.exif_transpose(source)  # fotos de celular vêm giradas via EXIF
+                if image.mode in ("RGBA", "LA", "P"):
+                    image = image.convert("RGBA")
+                    flat = Image.new("RGB", image.size, "white")  # transparência -> branco
+                    flat.paste(image, mask=image.getchannel("A"))
+                    image = flat
+                else:
+                    image = image.convert("RGB")
+                pages.append(image)
+        # Nome único: nunca reutiliza nem apaga um .part que não seja deste processo.
+        handle, name = tempfile.mkstemp(prefix=destination.name + ".", suffix=".part",
+                                        dir=destination.parent)
+        os.close(handle)
+        partial = Path(name)
+        try:
+            # shortcut: todas as páginas ficam em RAM, ok para dezenas de fotos; usar img2pdf se precisar de centenas
+            pages[0].save(partial, "PDF", save_all=True, append_images=pages[1:])
+            os.replace(partial, destination)
+        except BaseException:
+            partial.unlink(missing_ok=True)
+            raise
+    finally:
+        for page in pages:
+            page.close()
+
+
 # --------------------------------------------------------------------------
 # Interface
 # --------------------------------------------------------------------------
@@ -219,6 +269,7 @@ class App:
         self.lang = "pt"
         self.events: "queue.Queue" = queue.Queue()
         self.worker = None
+        self.pdf_worker = None
         self.process = None
         self.cancel_requested = False
 
@@ -242,13 +293,13 @@ class App:
 
     # ---- construção -------------------------------------------------------
     def _build_widgets(self) -> None:
-        self.root.geometry("720x640")
-        self.root.minsize(620, 560)
+        self.root.geometry("720x700")
+        self.root.minsize(620, 620)
         pad = {"padx": 10, "pady": 5}
         main = ttk.Frame(self.root)
         main.pack(fill="both", expand=True)
         main.columnconfigure(0, weight=1)
-        main.rowconfigure(5, weight=1)
+        main.rowconfigure(6, weight=1)
 
         self.menu = Menu(self.root)
         self.file_menu = Menu(self.menu, tearoff=False)
@@ -320,9 +371,15 @@ class App:
         self.btn_rec_folder = ttk.Button(self.grp_record, command=self.choose_recording_dir)
         self.btn_rec_folder.grid(row=2, column=3, sticky="e", padx=5)
 
+        # Imagens para PDF
+        self.grp_pdf = ttk.LabelFrame(main)
+        self.grp_pdf.grid(row=3, column=0, sticky="ew", **pad)
+        self.btn_pdf = ttk.Button(self.grp_pdf, command=self.create_pdf)
+        self.btn_pdf.grid(row=0, column=0, padx=5, pady=5)
+
         # Ações
         actions = ttk.Frame(main)
-        actions.grid(row=3, column=0, sticky="ew", **pad)
+        actions.grid(row=4, column=0, sticky="ew", **pad)
         self.btn_transcribe = ttk.Button(actions, command=self.start_transcription)
         self.btn_transcribe.pack(side="left")
         self.btn_cancel = ttk.Button(actions, command=self.cancel, state="disabled")
@@ -330,11 +387,11 @@ class App:
         self.status_label = ttk.Label(actions)
         self.status_label.pack(side="left", padx=10)
         self.progress = ttk.Progressbar(main, mode="indeterminate")
-        self.progress.grid(row=4, column=0, sticky="ew", padx=10)
+        self.progress.grid(row=5, column=0, sticky="ew", padx=10)
 
         # Registro
         self.grp_log = ttk.LabelFrame(main)
-        self.grp_log.grid(row=5, column=0, sticky="nsew", **pad)
+        self.grp_log.grid(row=6, column=0, sticky="nsew", **pad)
         self.grp_log.columnconfigure(0, weight=1)
         self.grp_log.rowconfigure(1, weight=1)
         self.progress_line = ttk.Label(self.grp_log, text="")
@@ -368,6 +425,8 @@ class App:
         self.audio_lang_combo.configure(values=[t[f"lang_{c}"] for c in LANGUAGES])
         self.effort_combo.current(max(effort_index, 0))
         self.audio_lang_combo.current(max(audio_index, 0))
+        self.grp_pdf.configure(text=t["grp_pdf"])
+        self.btn_pdf.configure(text=t["btn_pdf"])
         self.grp_record.configure(text=t["grp_record"])
         self.btn_record.configure(text=t["btn_record"])
         self.btn_stop.configure(text=t["btn_stop"])
@@ -425,6 +484,43 @@ class App:
         if path:
             self.recording_dir = Path(path)
             self.rec_folder_label.configure(text=str(self.recording_dir))
+
+    # ---- imagens para PDF --------------------------------------------------
+    def create_pdf(self) -> None:
+        try:
+            from PIL import Image
+        except ImportError:
+            messagebox.showerror(self.tr("err_title"), self.tr("err_no_pillow"))
+            return
+        patterns = " ".join(f"*.{ext}" for ext in IMAGE_EXTENSIONS)
+        chosen = filedialog.askopenfilenames(
+            title=self.tr("choose_images"),
+            filetypes=[(self.tr("filetype_images"), patterns),
+                       (self.tr("filetype_all"), "*.*")])
+        if not chosen:
+            return
+        images = sorted((Path(p) for p in chosen), key=lambda p: p.name.lower())
+        destination = filedialog.asksaveasfilename(  # já pergunta antes de sobrescrever
+            title=self.tr("save_pdf"), initialdir=str(images[0].parent),
+            initialfile=images[0].stem + ".pdf", defaultextension=".pdf",
+            filetypes=[("PDF", "*.pdf")])
+        if not destination:
+            return
+        self.btn_pdf.configure(state="disabled")
+        self.pdf_worker = threading.Thread(
+            target=self.run_pdf, args=(images, Path(destination)), daemon=True)
+        self.pdf_worker.start()
+
+    def run_pdf(self, images: list, destination: Path) -> None:
+        from PIL import Image
+        try:
+            images_to_pdf(images, destination)
+            self.emit("log", self.tr("pdf_saved", count=len(images), path=destination))
+        except (OSError, ValueError, MemoryError, Image.DecompressionBombError) as error:
+            # ilegível/não é imagem/disco cheio/imagem gigante demais
+            self.emit("error", self.tr("err_pdf", error=error or type(error).__name__))
+        finally:
+            self.emit("pdf_done")
 
     # ---- gravação ---------------------------------------------------------
     def start_recording(self) -> None:
@@ -690,6 +786,10 @@ class App:
                 if kind == "log":
                     self.progress_line.configure(text="")
                     self.append_log(payload)
+                elif kind == "error":
+                    messagebox.showerror(self.tr("err_title"), payload)
+                elif kind == "pdf_done":
+                    self.btn_pdf.configure(state="normal")
                 elif kind == "progress":
                     self.progress_line.configure(text=payload)
                 elif kind == "done":
@@ -703,7 +803,8 @@ class App:
         self.root.after(100, self.poll_events)
 
     def on_close(self) -> None:
-        if self.recording or self.is_busy():
+        pdf_busy = self.pdf_worker is not None and self.pdf_worker.is_alive()
+        if self.recording or self.is_busy() or pdf_busy:
             if not messagebox.askyesno(APP_NAME, self.tr("ask_quit")):
                 return
             self.cancel()
